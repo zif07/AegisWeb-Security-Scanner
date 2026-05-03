@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "AegisWeb Security Scanner",
+  "version": "0.1.0",
+  "description": "Detects website technologies, analyzes security settings, and scans for vulnerabilities.",
+  "permissions": ["webRequest", "tabs", "cookies"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "WebGuard Analyzer",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

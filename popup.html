@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>AegisWeb Security Scanner</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="app">
+    <!-- 1. PROFESSIONAL HEADER -->
+    <header class="navsec-header">
+      <div class="header-content">
+        <div class="logo-area">
+          <div class="shield-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Shield Background -->
+              <path d="M12 2L3 7V12C3 17.5 7 22 12 24C17 22 21 17.5 21 12V7L12 2Z" fill="#3B82F6" />
+              <!-- Bug Icon -->
+              <g transform="translate(5, 5) scale(0.583)" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                <path d="m8 2 1.88 1.88"/>
+                <path d="M14.12 3.88 16 2"/>
+                <path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/>
+                <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/>
+                <path d="M12 20v-9"/>
+                <path d="M6.53 9C4.6 8.8 3 7.1 3 5"/>
+                <path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4"/>
+                <path d="M8 14H4"/>
+                <path d="M16 14h4"/>
+                <path d="M9.7 18c-2.14 1.2-4.52 1.5-5.7 1.5"/>
+                <path d="M14.3 18c2.14 1.2 4.52 1.5 5.7 1.5"/>
+              </g>
+            </svg>
+          </div>
+          <div>
+            <h1 class="app-title">AegisWeb Security Scanner</h1>
+            <div class="app-subtitle">Comprehensive Vulnerability & Security Analysis</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="content-scroll">
+
+      <!-- 2. SCORE CARD -->
+      <div class="card score-card">
+        <div class="score-header">
+          <div class="score-value-container">
+            <span id="score-val" class="score-big">--</span>
+            <div class="score-meta">
+              <span class="score-label">Security Score</span>
+              <span id="score-text" class="score-status">Analyzing...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Segmented Gauge -->
+        <div class="gauge-container">
+          <div class="gauge-bar">
+            <div class="segment seg-1"></div>
+            <div class="segment seg-2"></div>
+            <div class="segment seg-3"></div>
+            <div class="segment seg-4"></div>
+            <div class="segment seg-5"></div>
+          </div>
+          <div class="gauge-labels">
+            <span>Critical</span><span>Poor</span><span>Fair</span><span>Good</span><span>Excellent</span>
+          </div>
+          <!-- Triangle Indicator (Positioned via JS) -->
+          <div id="gauge-indicator" class="gauge-indicator" style="left: 0%;">▼</div>
+        </div>
+      </div>
+
+      <!-- 3. ASSESSMENT SUMMARY -->
+      <div class="card summary-card">
+        <h3 class="card-title">Assessment Summary</h3>
+        <div class="summary-rows">
+          <div class="s-row total"><span class="label">Total Vulnerabilities</span><span id="sum-total"
+              class="val">0</span></div>
+          <div class="divider"></div>
+          <div class="s-row"><span class="label">Critical</span><span id="sum-crit" class="val danger">0</span></div>
+          <div class="s-row"><span class="label">Medium</span><span id="sum-med" class="val warning">0</span></div>
+          <div class="s-row"><span class="label">Low</span><span id="sum-low" class="val info">0</span></div>
+          <div class="s-row"><span class="label">Info</span><span id="sum-info" class="val success">0</span></div>
+        </div>
+      </div>
+
+      <!-- 4. CATEGORIES FOUND -->
+      <div class="card categories-card">
+        <h3 class="card-title">Categories Found</h3>
+        <div class="categories-grid" id="categories-list">
+          <!-- Populated by JS -->
+          <div class="cat-item"><span class="cat-icon">🔒</span> Transport Security <span class="cat-count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTON -->
+      <div class="action-area">
+        <button id="btn-dashboard" class="scan-btn">
+          <span class="btn-text">Open Dashboard</span>
+          <span class="spinner hidden"></span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+  <script src="purify.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,46 +1,12 @@
-// --- TECH DETECTION ---
-function detectTech() {
-  const tech = new Set();
-  const lower = (s) => (s || '').toLowerCase();
-
-  // 1. Meta Generator
-  document.querySelectorAll('meta[name="generator"]').forEach(g => {
-    if (g.content) tech.add(g.content);
-  });
-
-  // 2. Scripts/Links
-  const sources = [
-    ...Array.from(document.scripts).map(s => lower(s.src)),
-    ...Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(l => lower(l.href))
-  ];
-
-  if (sources.some(s => s.includes('wp-content'))) tech.add('WordPress');
-  if (sources.some(s => s.includes('jquery'))) tech.add('jQuery');
-  if (sources.some(s => s.includes('bootstrap'))) tech.add('Bootstrap');
-  if (sources.some(s => s.includes('fontawesome'))) tech.add('FontAwesome');
-  if (sources.some(s => s.includes('react'))) tech.add('React');
-  if (sources.some(s => s.includes('vue'))) tech.add('Vue.js');
-  if (sources.some(s => s.includes('angular'))) tech.add('Angular');
-
-  // 3. Global Vars / DOM
-  if (document.querySelector('[data-reactroot]')) tech.add('React');
-  if (window.React || window.ReactDOM) tech.add('React');
-  if (window.Vue) tech.add('Vue.js');
-  if (window.angular) tech.add('Angular');
-  if (window.jQuery) {
-    const v = window.jQuery.fn.jquery;
-    tech.add(`jQuery ${v || ''}`.trim());
-  }
-
-  return Array.from(tech);
-}
-
 // --- ACTIVE SCANNER ---
+// Note: This file relies on createFinding and levenshtein from utils.js, and detectTech from tech-detector.js
+// Since it's loaded as a content script, those will be available globally in the browser.
+
 function runActiveScan() {
   const findings = [];
   const origin = window.location.origin;
 
-  // 1. Phishing: Mismatched Links & Local Probing (OWASP A10) & Info Disclosure (OWASP A5)
+  // 1. Phishing: Mismatched Links & Local Probing (OWASP A01:2025) & Info Disclosure (OWASP A02:2025)
   document.querySelectorAll('a').forEach(a => {
     const text = a.textContent.trim();
     const href = a.href || '';
@@ -87,11 +53,11 @@ function runActiveScan() {
     findings.push(createFinding('Phishing', 'MEDIUM', 'Suspicious Website Address', 'You are visiting this site using numbers (an IP address) instead of a normal name like "google.com". Scammers often do this to hide.', window.location.hostname));
   }
 
-  // 3. Forms: Insecure Actions (OWASP A7)
+  // 3. Forms: Insecure Actions (OWASP A07:2025)
   document.querySelectorAll('form').forEach(f => {
-    const action = f.action || '';
-    if (action.startsWith('http:')) {
-      findings.push(createFinding('Authentication', 'CRITICAL', 'Unsafe Data Submission', 'When you click submit, your data is sent without encryption. Anyone watching the network can read it.', `Form action: ${action}`));
+    const actionStr = (typeof f.action === 'string' ? f.action : f.getAttribute('action')) || '';
+    if (actionStr.startsWith('http:')) {
+      findings.push(createFinding('Authentication', 'CRITICAL', 'Unsafe Data Submission', 'When you click submit, your data is sent without encryption. Anyone watching the network can read it.', `Form action: ${actionStr}`));
     }
 
     // Password field checks
@@ -133,7 +99,7 @@ function runActiveScan() {
     }
   });
 
-  // 6. DOM Analysis for Dangerous Sinks (OWASP A3: Injection)
+  // 6. DOM Analysis for Dangerous Sinks (OWASP A05:2025 Injection)
   document.querySelectorAll('script:not([src])').forEach(script => {
     const content = script.textContent || '';
     if (content.match(/eval\s*\(/)) {
@@ -167,7 +133,7 @@ function runActiveScan() {
     });
   } catch(e) {}
 
-  // 7. Missing SRI (OWASP A8)
+  // 7. Missing SRI (OWASP A03:2025 Software Supply Chain Failures)
   document.querySelectorAll('script[src], link[rel="stylesheet"][href]').forEach(el => {
     try {
       const url = el.src || el.href;
@@ -181,7 +147,7 @@ function runActiveScan() {
     } catch (e) {}
   });
 
-  // A01: Broken Access Control (Heuristic)
+  // A01:2025 Broken Access Control (Heuristic)
   document.querySelectorAll('input[type="hidden"]').forEach(inp => {
     const name = (inp.name || '').toLowerCase();
     if (name.includes('role') || name.includes('isadmin') || name.includes('permission')) {
@@ -196,7 +162,7 @@ function runActiveScan() {
     }
   });
 
-  // A04: Insecure Design (Heuristic - Missing CAPTCHA)
+  // A06:2025 Insecure Design (Heuristic - Missing CAPTCHA)
   const allForms = document.querySelectorAll('form');
   if (allForms.length > 0) {
     let hasCaptcha = false;
@@ -214,7 +180,7 @@ function runActiveScan() {
     }
   }
 
-  // A09: Security Logging & Monitoring Failures (Heuristic)
+  // A09:2025 Security Logging & Alerting Failures (Heuristic)
   const bodyText = document.body.innerText || '';
   if (bodyText.includes('SQL syntax error') || bodyText.includes('Stack trace:') || bodyText.match(/Warning: (mysql_|pg_|pdo_)/i)) {
     findings.push(createFinding('Logging & Monitoring', 'HIGH', 'Exposed Error Logs', 'The website is printing detailed database errors directly to the screen. These should be securely logged internally, not shown to the public!', 'Page Content'));
@@ -227,13 +193,13 @@ function runActiveScan() {
      findings.push(createFinding('Logging & Monitoring', 'INFO', 'No Frontend Monitoring Detected', 'No active error reporting scripts were detected. Ensure your backend logging is robust enough to catch attacks without them.', 'Website Tech'));
   }
 
-  // 8. Vulnerable Components (OWASP A6)
+  // 8. Vulnerable Components (OWASP A03:2025 Software Supply Chain Failures)
   const tech = detectTech();
   tech.forEach(t => {
     if (t.toLowerCase().startsWith('jquery ')) {
       const v = t.split(' ')[1];
       if (v && v.startsWith('1.') || v.startsWith('2.')) {
-        findings.push(createFinding('General Security', 'HIGH', 'Old, Vulnerable Technology', `The website was built using an old version of jQuery (${v}) that hackers already know exactly how to break into.`, t));
+        findings.push(createFinding('Supply Chain', 'HIGH', 'Old, Vulnerable Technology', `The website was built using an old version of jQuery (${v}) that hackers already know exactly how to break into.`, t));
       }
     }
   });
@@ -252,62 +218,9 @@ function runActiveScan() {
   return uniqueFindings;
 }
 
-function createFinding(category, severity, title, description, location) {
-  const owaspMap = {
-    'Phishing': 'A08: Software & Data Integrity Failures',
-    'Authentication': 'A07: Identification & Auth Failures',
-    'XSS & Injection': 'A03: Injection',
-    'Transport Security': 'A02: Cryptographic Failures',
-    'Iframe & External': 'A04: Insecure Design',
-    'Headers & CSP': 'A05: Security Misconfiguration',
-    'General Security': 'A05: Security Misconfiguration',
-    'Access Control': 'A01: Broken Access Control',
-    'Insecure Design': 'A04: Insecure Design',
-    'Logging & Monitoring': 'A09: Security Logging Failures'
+// --- EXPORTS FOR TESTING ---
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    runActiveScan
   };
-  return { category: owaspMap[category] || category, severity, title, description, location };
 }
-
-// UTILS
-function levenshtein(a, b) {
-  const matrix = [];
-  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) == a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
-  }
-  return matrix[b.length][a.length];
-}
-
-function sendDetection() {
-  chrome.runtime.sendMessage({
-    type: 'techDetection',
-    payload: {
-      isSecureContext: window.isSecureContext,
-      tech: detectTech()
-    }
-  });
-}
-
-// --- LISTENERS ---
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === 'runPageScan') {
-    const findings = runActiveScan();
-    sendResponse({ findings });
-  }
-});
-
-// Init
-detectTech();
-sendDetection();
-setTimeout(sendDetection, 2000);

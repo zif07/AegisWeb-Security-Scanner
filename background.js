@@ -46,7 +46,7 @@ async function performActiveScan(tabId, url) {
     cookies.forEach(c => {
       if (!c.secure) {
         findings.push({
-          category: 'A05: Security Misconfiguration',
+          category: 'A02:2025 Security Misconfiguration',
           severity: 'MEDIUM',
           title: 'Insecure Cookie',
           description: `Cookie "${c.name}" is missing the Secure flag.`,
@@ -59,7 +59,7 @@ async function performActiveScan(tabId, url) {
     });
     if (accessibleCount > 0) {
       findings.push({
-        category: 'A03: Injection',
+        category: 'A05:2025 Injection',
         severity: 'MEDIUM',
         title: 'Cookies accessible via JavaScript',
         description: `${accessibleCount} cookie(s) can be accessed by JavaScript, vulnerable to XSS theft`,
@@ -68,7 +68,7 @@ async function performActiveScan(tabId, url) {
     }
     if (cookies.length > 0) {
       findings.push({
-        category: 'A05: Security Misconfiguration',
+        category: 'A02:2025 Security Misconfiguration',
         severity: 'INFO',
         title: 'Cookie security flags should be verified',
         description: 'Ensure all cookies have Secure flag set for HTTPS sites',
@@ -93,20 +93,20 @@ async function performActiveScan(tabId, url) {
   const passiveData = resultsByTab.get(tabId);
   if (passiveData && passiveData.analysis) {
     const a = passiveData.analysis;
-    if (!a.csp) findings.push({ category: 'A05: Security Misconfiguration', severity: 'MEDIUM', title: 'Missing CSP', description: 'No Content Security Policy detected.', location: 'Headers' });
-    if (!a.hsts.present) findings.push({ category: 'A02: Cryptographic Failures', severity: 'LOW', title: 'Missing HSTS', description: 'Strict Transport Security not enforced.', location: 'Headers' });
-    if (!a.xFrameOptions) findings.push({ category: 'A05: Security Misconfiguration', severity: 'LOW', title: 'Missing X-Frame-Options', description: 'Potential Clickjacking risk.', location: 'Headers' });
+    if (!a.csp) findings.push({ category: 'A02:2025 Security Misconfiguration', severity: 'MEDIUM', title: 'Missing CSP', description: 'No Content Security Policy detected.', location: 'Headers' });
+    if (!a.hsts.present) findings.push({ category: 'A04:2025 Cryptographic Failures', severity: 'LOW', title: 'Missing HSTS', description: 'Strict Transport Security not enforced.', location: 'Headers' });
+    if (!a.xFrameOptions) findings.push({ category: 'A02:2025 Security Misconfiguration', severity: 'LOW', title: 'Missing X-Frame-Options', description: 'Potential Clickjacking risk.', location: 'Headers' });
     
-    // Header Information Disclosure (OWASP A5)
-    if (a.server) findings.push({ category: 'A05: Security Misconfiguration', severity: 'INFO', title: 'Server Header Exposed', description: `Server header exposes technology: ${a.server}`, location: 'Headers: Server' });
-    if (a.poweredBy) findings.push({ category: 'A05: Security Misconfiguration', severity: 'INFO', title: 'X-Powered-By Header Exposed', description: `X-Powered-By header exposes framework: ${a.poweredBy}`, location: 'Headers: X-Powered-By' });
+    // Header Information Disclosure (OWASP A02:2025)
+    if (a.server) findings.push({ category: 'A02:2025 Security Misconfiguration', severity: 'INFO', title: 'Server Header Exposed', description: `Server header exposes technology: ${a.server}`, location: 'Headers: Server' });
+    if (a.poweredBy) findings.push({ category: 'A02:2025 Security Misconfiguration', severity: 'INFO', title: 'X-Powered-By Header Exposed', description: `X-Powered-By header exposes framework: ${a.poweredBy}`, location: 'Headers: X-Powered-By' });
 
     if (a.https) {
       try {
         const proto = new URL(url).protocol;
-        findings.push({ category: 'A02: Cryptographic Failures', severity: 'INFO', title: 'HTTPS properly implemented', description: 'Site correctly uses HTTPS encryption', location: `Protocol: ${proto}` });
+        findings.push({ category: 'A04:2025 Cryptographic Failures', severity: 'INFO', title: 'HTTPS properly implemented', description: 'Site correctly uses HTTPS encryption', location: `Protocol: ${proto}` });
       } catch (_) {
-        findings.push({ category: 'A02: Cryptographic Failures', severity: 'INFO', title: 'HTTPS properly implemented', description: 'Site correctly uses HTTPS encryption', location: 'Protocol: https:' });
+        findings.push({ category: 'A04:2025 Cryptographic Failures', severity: 'INFO', title: 'HTTPS properly implemented', description: 'Site correctly uses HTTPS encryption', location: 'Protocol: https:' });
       }
     }
   }
@@ -162,8 +162,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ report });
       });
       return true; // async response
+    } else {
+      sendResponse({ report: null });
+      return false;
     }
   }
 });
 
 chrome.tabs.onRemoved.addListener(tabId => resultsByTab.delete(tabId));
+
+// --- EXPORTS FOR TESTING ---
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    normalizeHeaders,
+    analyzeHeaders,
+    computePassiveRisks,
+    performActiveScan
+  };
+}

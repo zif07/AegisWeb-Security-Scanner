@@ -13,12 +13,23 @@
   },
   "action": {
     "default_title": "WebGuard Analyzer",
-    "default_popup": "popup.html"
+    "default_popup": "popup/popup.html",
+    "default_icon": "assets/logo-light.png"
+  },
+  "icons": {
+    "16": "assets/logo-light.png",
+    "48": "assets/logo-light.png",
+    "128": "assets/logo-light.png"
   },
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": [
+        "content/utils.js",
+        "content/tech-detector.js",
+        "content/active-scanner.js",
+        "content/main.js"
+      ],
       "run_at": "document_end"
     }
   ]

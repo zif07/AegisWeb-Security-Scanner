@@ -4,10 +4,20 @@ let currentTabId = null;
 // --- UTILS ---
 
 function updateGauge(score) {
-  // Score: 0-100
+  // Score: 0-100, or null if unavailable
   const indicator = document.getElementById('gauge-indicator');
   const scoreVal = document.getElementById('score-val');
   const scoreText = document.getElementById('score-text');
+
+  if (score === null || score === undefined) {
+    indicator.style.left = '0%';
+    scoreVal.textContent = '--';
+    scoreVal.className = 'score-big';
+    scoreVal.style.color = '#94a3b8';
+    scoreText.textContent = 'Scan Unavailable';
+    scoreText.style.color = '#94a3b8';
+    return;
+  }
 
   // Clamp
   score = Math.max(0, Math.min(100, score));
@@ -143,23 +153,50 @@ function renderScanner(report) {
 }
 
 // --- MAIN ---
-document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', () => {
   chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
     const tab = tabs && tabs[0];
     if (!tab) return;
     currentTabId = tab.id;
 
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
+      updateGauge(null);
+      updateSummary({ total: '--', critical: '--', medium: '--', low: '--', info: '--' });
+      document.getElementById('categories-list').innerHTML = '<div style="grid-column: span 2; padding:8px; text-align:center; font-size:11px; color:#9fa6b2;">Scan unavailable for this page.</div>';
+      return;
+    }
+
     // Trigger Active Scan Immediately for accurate summary
     chrome.runtime.sendMessage({ type: 'startActiveScan', tabId: tab.id }, (resp) => {
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError);
+        updateGauge(null);
+        updateSummary({ total: '--', critical: '--', medium: '--', low: '--', info: '--' });
+        document.getElementById('categories-list').innerHTML = '<div style="grid-column: span 2; padding:8px; text-align:center; font-size:11px; color:#9fa6b2;">Scan unavailable for this page.</div>';
+        return;
+      }
       if (resp && resp.report) {
         renderScanner(resp.report);
+      } else {
+        updateGauge(null);
+        updateSummary({ total: '--', critical: '--', medium: '--', low: '--', info: '--' });
+        document.getElementById('categories-list').innerHTML = '<div style="grid-column: span 2; padding:8px; text-align:center; font-size:11px; color:#9fa6b2;">Scan unavailable for this page.</div>';
       }
     });
 
     // Dashboard Button
     document.getElementById('btn-dashboard').addEventListener('click', () => {
-      const dashboardUrl = chrome.runtime.getURL(`dashboard.html?tabId=${tab.id}`);
+      const dashboardUrl = chrome.runtime.getURL(`dashboard/dashboard.html?tabId=${tab.id}`);
       chrome.tabs.create({ url: dashboardUrl });
     });
   });
 });
+
+// --- EXPORTS FOR TESTING ---
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    updateGauge,
+    updateSummary,
+    updateCategories
+  };
+}

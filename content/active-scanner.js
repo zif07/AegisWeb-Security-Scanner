@@ -8,42 +8,53 @@ function runActiveScan() {
 
   // 1. Phishing: Mismatched Links & Local Probing (OWASP A01:2025) & Info Disclosure (OWASP A02:2025)
   document.querySelectorAll('a').forEach(a => {
-    const text = a.textContent.trim();
+    // Snyk Fix: Sanitize text and href immediately upon extraction to prevent XSS payloads
+    // from propagating into the extension's dashboard UI.
+    const text = escapeHTML(a.textContent.trim());
     const href = a.href || '';
+    const safeHref = escapeHTML(href);
     const lowerHref = href.toLowerCase();
 
     // Heuristic: Text looks like a URL but href is different
     if (text.match(/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i)) {
       if (lowerHref.startsWith('http') && !lowerHref.includes(text) && !text.includes('...')) {
-        findings.push(createFinding('Phishing', 'HIGH', 'Deceptive Link Detected', `The wording says "${text}" but actually sends you to a completely different place!`, `<a href="${href}">${text}</a>`));
+        findings.push(createFinding('Phishing', 'HIGH', 'Deceptive Link Detected', `The wording says "${text}" but actually sends you to a completely different place!`, `<a href="${safeHref}">${text}</a>`));
       }
     }
 
     // SSRF / Local Probing
     if (lowerHref.includes('127.0.0.1') || lowerHref.includes('localhost') || lowerHref.includes('169.254.169.254')) {
-      findings.push(createFinding('Iframe & External', 'HIGH', 'Sneaky Network Probing', 'This link isn\'t pointing to a normal website—it\'s trying to peek at secret files behind the scenes.', href));
+      findings.push(createFinding('Iframe & External', 'HIGH', 'Sneaky Network Probing', 'This link isn\'t pointing to a normal website—it\'s trying to peek at secret files behind the scenes.', safeHref));
     }
 
     // Info Disclosure (Files)
     if (lowerHref.endsWith('.env') || lowerHref.endsWith('.git') || lowerHref.endsWith('.bak') || lowerHref.endsWith('.sql')) {
-      findings.push(createFinding('General Security', 'CRITICAL', 'Leaked Technical File', 'This link points to a private backup or settings file that hackers shouldn\'t be allowed to see.', href));
+      findings.push(createFinding('General Security', 'CRITICAL', 'Leaked Technical File', 'This link points to a private backup or settings file that hackers shouldn\'t be allowed to see.', safeHref));
     }
 
     // Exposed Emails
     if (lowerHref.startsWith('mailto:')) {
-      findings.push(createFinding('General Security', 'INFO', 'Visible Email Address', 'An email address is printed directly in the code, meaning spam bots can easily copy it.', href.replace('mailto:', '')));
+      findings.push(createFinding('General Security', 'INFO', 'Visible Email Address', 'An email address is printed directly in the code, meaning spam bots can easily copy it.', safeHref.replace('mailto:', '')));
     }
 
     // XSS: javascript: links
     if (lowerHref.startsWith('javascript:')) {
-      findings.push(createFinding('XSS & Injection', 'MEDIUM', 'Hidden Script inside a Link', 'This link is actually a hidden piece of code. Clicking it runs the code, which hackers sometimes use to steal your account.', `<a href="${href}">`));
+      findings.push(createFinding('XSS & Injection', 'MEDIUM', 'Hidden Script inside a Link', 'This link is actually a hidden piece of code. Clicking it runs the code, which hackers sometimes use to steal your account.', `<a href="${safeHref}">`));
+      
+      // FYP Remediation: Active Protection
+      // We block the actual click event so the malicious code cannot execute in the browser.
+      a.addEventListener('click', function(event) {
+        event.preventDefault(); // Stop the javascript: from running
+        console.log("AegisWeb blocked a non-standard URI scheme:", lowerHref);
+        alert("🛡️ AegisWeb Security Scanner blocked a malicious script from executing!");
+      });
     }
 
     // Reverse Tabnabbing
     if (a.getAttribute('target') === '_blank') {
       const rel = (a.getAttribute('rel') || '').toLowerCase();
       if (!rel.includes('noopener') && !rel.includes('noreferrer')) {
-        findings.push(createFinding('Iframe & External', 'LOW', 'Dangerous Outside Link', 'This link opens a new tab but doesn\'t lock it down. The new tab could secretly rewrite the original page to trick you.', href));
+        findings.push(createFinding('Iframe & External', 'LOW', 'Dangerous Outside Link', 'This link opens a new tab but doesn\'t lock it down. The new tab could secretly rewrite the original page to trick you.', safeHref));
       }
     }
   });

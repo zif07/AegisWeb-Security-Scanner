@@ -36,10 +36,24 @@ function levenshtein(a, b) {
   return matrix[b.length][a.length];
 }
 
+function escapeHTML(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
 // --- EXPORTS FOR TESTING ---
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     createFinding,
-    levenshtein
+    levenshtein,
+    escapeHTML
   };
 }

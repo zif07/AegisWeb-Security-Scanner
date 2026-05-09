@@ -3,7 +3,7 @@
   "name": "AegisWeb Security Scanner",
   "version": "0.1.0",
   "description": "Detects website technologies, analyzes security settings, and scans for vulnerabilities.",
-  "permissions": ["webRequest", "tabs", "cookies"],
+  "permissions": ["webRequest", "tabs", "cookies", "storage"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none';"
@@ -28,6 +28,7 @@
         "content/utils.js",
         "content/tech-detector.js",
         "content/active-scanner.js",
+        "content/widget.js",
         "content/main.js"
       ],
       "run_at": "document_end"

@@ -13,7 +13,7 @@ function runActiveScan() {
     const text = escapeHTML(a.textContent.trim());
     const href = a.href || '';
     const safeHref = escapeHTML(href);
-    const lowerHref = href.toLowerCase();
+    const lowerHref = href.trim().toLowerCase();
 
     // Heuristic: Text looks like a URL but href is different
     if (text.match(/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i)) {
@@ -38,7 +38,7 @@ function runActiveScan() {
     }
 
     // XSS: javascript: links
-    if (lowerHref.startsWith('javascript:')) {
+    if (/^\s*javascript:/i.test(href)) {
       findings.push(createFinding('XSS & Injection', 'MEDIUM', 'Hidden Script inside a Link', 'This link is actually a hidden piece of code. Clicking it runs the code, which hackers sometimes use to steal your account.', `<a href="${safeHref}">`));
       
       // FYP Remediation: Active Protection

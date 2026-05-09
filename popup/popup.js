@@ -189,6 +189,18 @@ function renderScanner(report) {
       const dashboardUrl = chrome.runtime.getURL(`dashboard/dashboard.html?tabId=${tab.id}`);
       chrome.tabs.create({ url: dashboardUrl });
     });
+
+    // Widget Toggle logic
+    const widgetToggle = document.getElementById('widget-toggle');
+    if (chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get({ widgetEnabled: false }, (result) => {
+        widgetToggle.checked = result.widgetEnabled;
+      });
+
+      widgetToggle.addEventListener('change', (e) => {
+        chrome.storage.local.set({ widgetEnabled: e.target.checked });
+      });
+    }
   });
 });
 

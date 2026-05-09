@@ -155,9 +155,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Active Scan Trigger
   if (msg.type === 'startActiveScan') {
-    const tabId = msg.tabId;
-    const data = resultsByTab.get(tabId);
-    if (data && data.url) {
+    const tabId = msg.tabId || (sender.tab && sender.tab.id);
+    const data = resultsByTab.get(tabId) || { url: sender.tab && sender.tab.url };
+    if (tabId && data && data.url) {
       performActiveScan(tabId, data.url).then(report => {
         sendResponse({ report });
       });

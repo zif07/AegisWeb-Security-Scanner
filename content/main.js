@@ -23,3 +23,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 detectTech();
 sendDetection();
 setTimeout(sendDetection, 2000);
+
+// Start anti-tamper protection (Storage Integrity + Injection guards)
+if (window.AegisAntiTamper) {
+  window.AegisAntiTamper.startGuard();
+}

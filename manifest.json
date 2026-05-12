@@ -28,7 +28,7 @@
         "content/utils.js",
         "content/tech-detector.js",
         "content/active-scanner.js",
-        "content/widget.js",
+        "content/anti-tamper.js",
         "content/main.js"
       ],
       "run_at": "document_end"

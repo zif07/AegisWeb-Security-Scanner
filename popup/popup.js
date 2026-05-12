@@ -190,17 +190,6 @@ function renderScanner(report) {
       chrome.tabs.create({ url: dashboardUrl });
     });
 
-    // Widget Toggle logic
-    const widgetToggle = document.getElementById('widget-toggle');
-    if (chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get({ widgetEnabled: false }, (result) => {
-        widgetToggle.checked = result.widgetEnabled;
-      });
-
-      widgetToggle.addEventListener('change', (e) => {
-        chrome.storage.local.set({ widgetEnabled: e.target.checked });
-      });
-    }
   });
 });
 
@@ -212,3 +201,56 @@ if (typeof module !== 'undefined' && module.exports) {
     updateCategories
   };
 }
+
+/**
+ * --- UI INTEGRITY GUARD (ANTI-TAMPER) ---
+ * Watches the popup UI for manual tampering in DevTools.
+ * Starts after a short delay so the scan results can load first.
+ */
+function startUIIntegrityGuard() {
+  const container = document.body;
+  if (!container) return;
+
+  // Wait 3 seconds for the scan to finish loading before watching
+  setTimeout(() => {
+    console.info('[AegisWeb Anti-Tamper] Popup UI guard now active.');
+
+    const _uiObserver = new MutationObserver((mutations) => {
+      for (const mut of mutations) {
+        // 1. Detect if text was EDITED
+        if (mut.type === 'characterData' || (mut.type === 'childList' && mut.target.nodeType === Node.ELEMENT_NODE)) {
+          const target = mut.target.parentElement || mut.target;
+          const isCriticalUI = target.closest('#score-val, #score-text, #sum-total, #sum-crit, #sum-med, #sum-low, #sum-info, .cat-count, .sum-item, .cat-item, .card-title, .app-title, .score-label, .label');
+          
+          if (isCriticalUI) {
+            console.warn('[AegisWeb Anti-Tamper] UI manipulation detected. Restoring...');
+            location.reload();
+            return;
+          }
+        }
+
+        // 2. Detect if an element was DELETED (removedNodes)
+        if (mut.type === 'childList' && mut.removedNodes.length > 0) {
+          for (const node of mut.removedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              if (node.id === 'score-text' || node.id === 'score-val' || node.classList.contains('sum-item') || node.classList.contains('cat-item')) {
+                console.warn('[AegisWeb Anti-Tamper] UI removal detected. Restoring...');
+                location.reload();
+                return;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    _uiObserver.observe(container, {
+      characterData: true,
+      childList: true,
+      subtree: true
+    });
+  }, 3000);
+}
+
+// Start the guard when the popup is ready
+document.addEventListener('DOMContentLoaded', startUIIntegrityGuard);

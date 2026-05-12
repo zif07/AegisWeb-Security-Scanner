@@ -135,6 +135,9 @@ chrome.webRequest.onHeadersReceived.addListener(
   ['responseHeaders']
 );
 
+// --- TAMPER AUDIT LOG ---
+const tamperLog = [];
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Tech Detection (Passive)
   if (msg.type === 'techDetection') {
@@ -145,6 +148,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       resultsByTab.set(tabId, prev);
     }
     return;
+  }
+
+  // Anti-Tamper Event (from content/anti-tamper.js)
+  if (msg.type === 'aegisTamperDetected') {
+    const entry = {
+      tabId:  sender.tab?.id,
+      url:    sender.tab?.url,
+      ts:     Date.now(),
+      detail: msg.detail
+    };
+    tamperLog.push(entry);
+    console.warn('[AegisWeb Background] Tamper event recorded:', entry);
+    // Optionally surface alert to the user via badge
+    if (sender.tab?.id) {
+      chrome.action.setBadgeText({ text: '⚠', tabId: sender.tab.id }).catch(() => {});
+      chrome.action.setBadgeBackgroundColor({ color: '#ef4444', tabId: sender.tab.id }).catch(() => {});
+    }
+    sendResponse({ ok: true });
+    return true;
   }
 
   // Dashboard Data Request

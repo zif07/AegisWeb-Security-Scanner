@@ -118,6 +118,7 @@ async function performActiveScan(tabId, url) {
 chrome.webRequest.onHeadersReceived.addListener(
   details => {
     if (details.type !== 'main_frame' || details.tabId < 0) return;
+    console.log(`[AegisWeb] Passive Interception: Intercepted headers for URL: ${details.url}`);
     const headerMap = normalizeHeaders(details.responseHeaders);
     const analysis = analyzeHeaders(details.url, headerMap);
     const data = {
@@ -130,6 +131,7 @@ chrome.webRequest.onHeadersReceived.addListener(
     // Merge
     const prev = resultsByTab.get(details.tabId) || {};
     resultsByTab.set(details.tabId, { ...prev, ...data });
+    console.log(`[AegisWeb] Stored Passive Data: Saved headers and security analysis in memory for tab ${details.tabId}.`);
   },
   { urls: ['<all_urls>'] },
   ['responseHeaders']
@@ -146,6 +148,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const prev = resultsByTab.get(tabId) || {};
       prev.tech = msg.payload.tech;
       resultsByTab.set(tabId, prev);
+      console.log(`[AegisWeb] Tech Detection: Identified technologies on tab ${tabId}:`, msg.payload.tech);
     }
     return;
   }
@@ -180,11 +183,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const tabId = msg.tabId || (sender.tab && sender.tab.id);
     const data = resultsByTab.get(tabId) || { url: sender.tab && sender.tab.url };
     if (tabId && data && data.url) {
+      console.log(`[AegisWeb] Active Scan Triggered: Starting security audit on tab ${tabId} for: ${data.url}`);
       performActiveScan(tabId, data.url).then(report => {
+        console.log(`[AegisWeb] Active Scan Finished: Found ${report.findings.length} security vulnerability findings.`);
         sendResponse({ report });
       });
       return true; // async response
     } else {
+      console.warn('[AegisWeb] Active Scan Failed: Tab ID or URL not resolved.');
       sendResponse({ report: null });
       return false;
     }

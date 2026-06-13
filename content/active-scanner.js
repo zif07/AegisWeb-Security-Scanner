@@ -8,8 +8,7 @@ function runActiveScan() {
 
   // 1. Phishing: Mismatched Links & Local Probing (OWASP A01:2025) & Info Disclosure (OWASP A02:2025)
   document.querySelectorAll('a').forEach(a => {
-    // Snyk Fix: Sanitize text and href immediately upon extraction to prevent XSS payloads
-    // from propagating into the extension's dashboard UI.
+
     const text = escapeHTML(a.textContent.trim());
     const href = a.href || '';
     const safeHref = escapeHTML(href);
@@ -37,8 +36,8 @@ function runActiveScan() {
       findings.push(createFinding('General Security', 'INFO', 'Visible Email Address', 'An email address is printed directly in the code, meaning spam bots can easily copy it.', safeHref.replace('mailto:', '')));
     }
 
-    // XSS: javascript: links
-    if (/^\s*javascript:/i.test(href)) {
+    // XSS: javascript:, data:, and vbscript: links
+    if (/^\s*(javascript|data|vbscript):/i.test(href)) {
       findings.push(createFinding('XSS & Injection', 'MEDIUM', 'Hidden Script inside a Link', 'This link is actually a hidden piece of code. Clicking it runs the code, which hackers sometimes use to steal your account.', `<a href="${safeHref}">`));
       
       // FYP Remediation: Active Protection

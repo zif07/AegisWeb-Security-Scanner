@@ -72,18 +72,21 @@
   function _isSuspiciousSrc(src) {
     if (!src) return false;
 
-    // Explicit dangerous schemes used as src values
-    if (src.startsWith('javascript:')) return true;
-    if (src.startsWith('data:text/html') || src.startsWith('data:application/javascript')) return true;
+    // Normalize to lowercase for case-insensitive comparison
+    const lowerSrc = src.toLowerCase().trim();
+
+    // Explicit dangerous schemes used as src values (XSS vectors)
+    // Using a regex is more secure against leading whitespace/control characters and satisfies Snyk
+    if (/^\s*(javascript|vbscript|data):/i.test(lowerSrc)) return true;
 
     // Our own extension is always safe
-    if (src.startsWith('chrome-extension://')) return false;
+    if (/^chrome-extension:\/\//i.test(lowerSrc)) return false;
 
     // about: and blob: are standard browser-generated URIs — not suspicious
-    if (src.startsWith('about:') || src.startsWith('blob:')) return false;
+    if (/^(about|blob):/i.test(lowerSrc)) return false;
 
     // Placeholder values we assign when there is no src/srcdoc
-    if (src === '(inline)' || src === '(unknown)' || src === '(srcdoc)') return false;
+    if (lowerSrc === '(inline)' || lowerSrc === '(unknown)' || lowerSrc === '(srcdoc)') return false;
 
     try {
       const url = new URL(src);

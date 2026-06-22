@@ -23,7 +23,7 @@ function runActiveScan() {
 
     // SSRF / Local Probing
     if (lowerHref.includes('127.0.0.1') || lowerHref.includes('localhost') || lowerHref.includes('169.254.169.254')) {
-      findings.push(createFinding('Iframe & External', 'HIGH', 'Sneaky Network Probing', 'This link isn\'t pointing to a normal website—it\'s trying to peek at secret files behind the scenes.', safeHref));
+      findings.push(createFinding('SSRF', 'HIGH', 'Internal Network Probing (SSRF Vector)', 'This link points to an internal loopback or cloud metadata address, exposing potential SSRF scanning vectors.', safeHref));
     }
 
     // Info Disclosure (Files)
@@ -143,6 +143,21 @@ function runActiveScan() {
     });
   } catch(e) {}
 
+  // 6.6 SSRF Entry Point Detection (OWASP A10:2025 SSRF Heuristics)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ssrfKeys = ['url', 'file', 'image', 'path', 'dest', 'redirect', 'uri', 'domain', 'host', 'link', 'pdf'];
+    params.forEach((val, key) => {
+      const lowerKey = key.toLowerCase();
+      if (ssrfKeys.includes(lowerKey)) {
+        const looksLikeUrl = val.match(/^(https?:\/\/|www\.|\/)/i) || val.match(/\.[a-z]{2,}/i);
+        if (looksLikeUrl) {
+          findings.push(createFinding('SSRF', 'MEDIUM', 'Potential SSRF Entry Point', `The URL parameter "${key}" takes a file path or external web address. If the backend server fetches this location without validation, it is vulnerable to Server-Side Request Forgery (SSRF).`, `URL Parameter: ?${key}=...`));
+        }
+      }
+    });
+  } catch(e) {}
+
   // 7. Missing SRI (OWASP A03:2025 Software Supply Chain Failures)
   document.querySelectorAll('script[src], link[rel="stylesheet"][href]').forEach(el => {
     try {
@@ -190,10 +205,10 @@ function runActiveScan() {
     }
   }
 
-  // A09:2025 Security Logging & Alerting Failures (Heuristic)
+  // A10:2025 Mishandling of Exceptional Conditions (Heuristic)
   const bodyText = document.body.innerText || '';
   if (bodyText.includes('SQL syntax error') || bodyText.includes('Stack trace:') || bodyText.match(/Warning: (mysql_|pg_|pdo_)/i)) {
-    findings.push(createFinding('Logging & Monitoring', 'HIGH', 'Exposed Error Logs', 'The website is printing detailed database errors directly to the screen. These should be securely logged internally, not shown to the public!', 'Page Content'));
+    findings.push(createFinding('Exceptional Conditions', 'HIGH', 'Exposed Error Logs', 'The website is printing detailed database errors directly to the screen. These should be securely logged internally, not shown to the public!', 'Page Content'));
   }
   const hasMon = Array.from(document.scripts).some(s => {
     const src = (s.src || '').toLowerCase();

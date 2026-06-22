@@ -10,7 +10,9 @@ function createFinding(category, severity, title, description, location) {
     'Access Control': 'A01:2025 Broken Access Control',
     'Insecure Design': 'A06:2025 Insecure Design',
     'Logging & Monitoring': 'A09:2025 Security Logging and Alerting Failures',
-    'Supply Chain': 'A03:2025 Software Supply Chain Failures'
+    'Supply Chain': 'A03:2025 Software Supply Chain Failures',
+    'SSRF': 'A01:2025 Broken Access Control',
+    'Exceptional Conditions': 'A10:2025 Mishandling of Exceptional Conditions'
   };
   return { category: owaspMap[category] || category, severity, title, description, location };
 }
